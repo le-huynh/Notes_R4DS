@@ -1,0 +1,63 @@
+---
+title: "Graphics for communication"
+output: html_document
+---
+
+```{r , message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+library(viridis)
+library(RColorBrewer)
+```
+
+### Exercise 28.2. Label
+1. Create one plot on the fuel economy data with customised `title`, `subtitle`,
+`caption`, `x`, `y`, and `colour` labels  
+```{r}
+ggplot(data = mpg,
+       mapping = aes(x = displ, y = hwy)) +
+	geom_point(mapping = aes(color = class)) +
+	geom_smooth(se = FALSE) +
+	labs(title = "Fuel efficiency generally decreases with engine size",
+	     subtitle = "Two seaters (sports cars) are an exception because of their light weight",
+	     caption = "Data from fueleconomy.gov",
+	     x = "Engine displacement (Litres)",
+	     y = "Highway miles per gallon",
+	     color = "Car type")
+
+```
+
+### Exercise 28.4 - Scales
+1. Why doesn’t the following code override the default scale?  
+```{r}
+df <- tibble(
+  x = rnorm(10000),
+  y = rnorm(10000)
+)
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  scale_colour_gradient(low = "white", high = "red") +
+  coord_fixed()
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  scale_fill_gradient(low = "white", high = "red") +
+  coord_fixed()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
