@@ -1,0 +1,218 @@
+---
+title: "Data transformation"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(nycflights13)
+```
+
+```{r}
+flights
+```
+
+## Exercise 5.2 --> dplyr::filter()
+1. Find all flights that..
+```{r}
+# Had an arrival delay of two or more hours
+flights %>% filter(arr_delay >= 120)
+```
+
+```{r}
+# Flew to Houston (IAH or HOU)
+houston1 <- flights %>% filter(dest == "IAH" | dest == "HOU")
+
+houston2 <- flights %>% filter(dest %in% c("IAH", "HOU"))
+
+identical(houston1, houston2)
+
+houston1
+```
+
+```{r}
+# Were operated by United, American, or Delta
+airlines
+
+carrier1 <- flights %>% filter(carrier == "UA" | carrier == "AA" | carrier == "DL")
+
+carrier2 <- flights %>% filter(carrier %in% c("UA", "AA", "DL"))
+
+identical(carrier1, carrier2)
+
+carrier1
+```
+
+```{r}
+# Departed in summer (July, August, and September)
+season1 <- flights %>% filter(month == 7 | month == 8 | month == 9)
+
+season2 <- flights %>% filter(month %in% c(7, 8, 9))
+season3 <- flights %>% filter(month %in% 7:9)
+
+season4 <- flights %>% filter(between(month, 7, 9))
+
+
+identical(season1, season2)
+identical(season2, season3)
+identical(season3, season4)
+
+season1
+```
+
+```{r}
+# Arrived more than two hours late, but didn’t leave late
+flights %>% filter(arr_delay > 120, dep_delay <= 0)
+```
+
+```{r}
+# Were delayed by at least an hour, but made up over 30 minutes in flight
+flights %>% filter(dep_delay >= 60, dep_delay - arr_delay > 30)
+```
+
+```{r}
+# Departed between midnight and 6am (inclusive)
+summary(flights$dep_time)
+
+flights %>% filter(dep_time == 2400 | dep_time <= 600)
+
+```
+
+3.
+```{r}
+# How many flights have a missing dep_time? 
+flights %>% filter(is.na(dep_time) == TRUE) %>% count()
+
+# What other variables are missing? What might these rows represent?
+```
+
+## Exercise 5.3 - dplyr::arrange()
+```{r}
+# 1. sort all missing values to the start
+flights %>% arrange(desc(is.na(dep_time)))
+```
+
+```{r}
+# 2. Sort flights to find the most delayed flights
+flights %>% arrange(desc(dep_delay))
+
+# Find the flights that left earliest
+flights %>% arrange((dep_delay))
+```
+
+```{r}
+# 3. Find the fastest (highest speed) flights
+flights %>% arrange(desc(distance / air_time))
+
+flights %>% mutate(speed = distance / air_time) %>% arrange(desc(speed))
+
+```
+
+```{r}
+# 4. Which flights travelled the farthest? 
+flights %>% arrange(desc(distance))
+
+# Which travelled the shortest?
+flights %>% arrange(distance)
+```
+
+## Exercise 5.4. - dplyr::select()
+1. select `dep_time`, `dep_delay`, `arr_time`, and `arr_delay` from `flights`
+```{r}
+flights %>% select(dep_time, dep_delay, arr_time, arr_delay)
+
+flights %>% select(starts_with(c("dep_", "arr_")))
+```
+
+2. What happens if you include the name of a variable multiple times in a 
+`select()` call?
+```{r}
+flights %>% select(dep_time, dep_delay, dep_time, dep_time)
+```
+
+3. What does the `any_of()` function do?
+```{r}
+vars <- c("year", "month", "day", "dep_delay", "arr_delay")
+
+flights %>% select(any_of(vars))
+
+flights %>% select(vars)
+
+```
+
+4. Does the result of running the following code surprise you?
+```{r}
+select(flights, contains("TIME"))
+
+select(flights, contains("TIME", ignore.case = FALSE))
+```
+
+## Exercise 5.5. - dplyr::mutate()
+1. Convert `dep_time` and `sched_dep_time` to number of minutes since midnight  
+```{r}
+convertMin = function(x) {(x %/% 100 * 60 + x %% 100) %% 1440}
+
+flights %>% mutate(dep_time_min = convertMin(dep_time),
+	         sched_dep_time_min = convertMin(sched_dep_time)
+	         )
+```
+
+2. Compare `air_time` with `arr_time - dep_time`. 
+What do you expect to see? What do you see? What do you need to do to fix it?  
+```{r}
+flights %>% mutate(flight_time = arr_time - dep_time,
+	         compare = air_time - flight_time) %>%
+	select(air_time, flight_time, compare)
+
+```
+
+I expect to see `air_time` == `arr_time - dep_time`.  
+I see the problem:  
+* `air_time` unit is minute  
+* `arr_time - dep_time` unit is in format HMM or HHMM  
+=> Solution:  
+* convert `arr_time` and `dep_time` to minutes  
+* compare
+```{r}
+flights %>% mutate(dep_time_min = convertMin(dep_time),
+	         arr_time_min = convertMin(arr_time),
+	         flight_time = arr_time_min - dep_time_min,
+	         compare = air_time - flight_time
+	         ) %>%
+	select(air_time, flight_time, compare,
+	       dep_time, dep_time_min, 
+	       arr_time, arr_time_min 
+	       )
+```
+
+3. Compare `dep_time`, `sched_dep_time`, and `dep_delay`. 
+How would you expect those three numbers to be related?  
+```{r}
+flights %>% mutate(dep_time_min = convertMin(dep_time),
+	         sched_dep_time_min = convertMin(sched_dep_time),
+	         dep_delay_expect = dep_time_min - sched_dep_time_min,
+	         compare = dep_delay - dep_delay_expect) %>%
+	select(dep_time, dep_time_min,
+	       sched_dep_time, sched_dep_time_min,
+	       dep_delay_expect,
+	       dep_delay,
+	       compare)
+```
+
+4. Find the 10 most delayed flights using a ranking function. 
+How do you want to handle ties? Carefully read the documentation for `min_rank()` 
+
+5. What does 1:3 + 1:10 return? Why?  
+```{r}
+1:3 + 1:10
+```
+
+6. What trigonometric functions does R provide?  
+
+## Exercise 5.6. - dplyr::summarise()
+
+
+## Exercise 5.7 - Grouped mutates (and filters)
+
+
+
